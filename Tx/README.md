@@ -1,0 +1,1 @@
+This is the initial commit for the Tx-side. I run this on a Raspiberry Pi Zero W, that is mounted to the actual drone flying around. Attatched are some sensors that read their data and send them over the wifi monitor antenna (not the internal chip.)
