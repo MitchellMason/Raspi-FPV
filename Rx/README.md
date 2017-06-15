@@ -1,0 +1,1 @@
+Initial commit of the Rx-side. This is run on a Raspberry Pi 3 with a monitor attatched. It receives the data from the transmitter and displays them fullscreen in an application written in Processing.
