@@ -1,37 +1,53 @@
 #!/bin/bash
 
-#Get number of interfaces. If there's only one (plus lo) then we transmit then shutdown
-ifaces="$(ls -A /sys/class/net | wc -l)"
-maxiFaces=1
-echo "total ifaces: " $ifaces
+# This is the script that should be run at boot time, when connected to the drone
+# If desired, pass '-shutdown' from the command line to safely shut down when
+# finished
+echo "Raspi-FPV created by Mitchell Mason (C) 2016"
 
-if (($ifaces < $maxiFaces))
+shutdownFlag='-shutdown'
+
+if [[ "$1" == "$shutdownFlag" ]];
 then
-	echo "We'll shutdown at the end"
-else
-	echo "We won't shut down"
+    echo "On completion, we'll shut down"
 fi
 
+#Send the config file over bluetooth
+python initFPV.py config.json
+
 #read data from the config file
-echo "Reading config"
+echo "*****Reading config"
 python jsonToTerminal.py config.json > temp.dat #UGLY HACK, BUT WE DO WHAT WE HAVE TO
 source temp.dat
 rm temp.dat
 
-echo "Begin transmitter"
+#initialize the fifos
+sudo rm -f /tmp/fifo0
+sudo rm -f /tmp/fifo1
+mkfifo /tmp/fifo0
+mkfifo /tmp/fifo1
+
+echo "*****Begin transmitter"
 sudo killall ifplugd #stop management of interface
-echo "configuring antenna"
+echo "*****Configuring antenna"
 sudo ifconfig wlan_fpv down
 sudo iw dev wlan_fpv set monitor otherbss fcsfail
 sudo ifconfig wlan_fpv up
 sudo iwconfig wlan_fpv channel 13
-echo "Starting capture"
-#raspivid -ih -t 0 -w $width -h $height -fps $fps -b $bitrate -g $keyframerate -pf main -fl -o - | sudo /home/pi/wifibroadcast/tx -b $packetsPerBlock -r $fec -f $bytesPerPacket wlan_fpv
-python telemetryTx.py config.json | sudo /home/pi/wifibroadcast/tx -m $telBytesPerPacket -b $telPacketsPerBlock -r $fec -p 1 wlan_fpv
 
-#When we're done transmitting, safely turn off
-if (($ifaces < $maxiFaces))
+
+#telemetry
+echo "*****Starting telemetry"
+sudo python telemetryTx.py ./config.json /tmp/fifo1 &!
+
+#video
+echo "*****Starting video"
+sudo raspivid -ih -t 0 -w $width -h $height -fps $fps -b $bitrate -g $keyframerate -pf main -fl -o /tmp/fifo0 &!
+
+#Transmission
+sudo tx -b $packetsPerBlock -r $fec -f $bytesPerPacket -s 2 wlan_fpv
+
+if [[ "$1" == "$shutdownFlag" ]];
 then
-	echo "Shutdown!"
-	#sudo shutdown now
+    sudo shutdown now
 fi
