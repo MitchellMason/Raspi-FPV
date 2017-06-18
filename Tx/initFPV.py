@@ -10,7 +10,8 @@ if(len(sys.argv) != 2):
 
 print("reading " + sys.argv[1])
 config_file = open(sys.argv[1], 'r')
-config_json = json.loads(config_file.read())
+raw_json = config_file.read()
+config_json = json.loads(raw_json) #Load the JSON to check for errors
 print("done")
 
 hostMACAddress = 'B8:27:EB:69:ED:8B' #local BT addr
@@ -27,7 +28,7 @@ try:
     print("waiting for connection on " + str(sock.getsockname()))
     client, clientInfo = sock.accept()
     print("Connected to " + str(client) + ". Sending file")
-    client.send(str(config_json))
+    client.send(str(raw_json))
     print("Sent. Closing")
     client.close()
     sock.close()

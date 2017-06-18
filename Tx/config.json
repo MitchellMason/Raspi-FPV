@@ -1,11 +1,9 @@
 {
     "network": {
         "bytesPerPacket": 1024,
-        "fec": 4,
+        "fec": 18,
         "packetsPerBlock": 8,
-        "telBytesPerPacket": 8,
-        "telDataOrder": "{heading},{altitude},{aob},{pitch},{speed},{oat}",
-        "telPacketsPerBlock": 4
+        "telDataOrder": "{heading},{altitude},{aob},{pitch},{speed},{oat}"
     },
     "video": {
         "bitrate": 2000000,

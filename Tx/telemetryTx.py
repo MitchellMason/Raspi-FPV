@@ -1,9 +1,15 @@
 #!/usr/bin/env python
+
+# This python script reads the sensor data and the config file
+# After the data is read to be sent, it is printed to stdout
+# and piped into wifibroadcast's tx
+
 import sys
 import json
 from envirophat import *
 from time import sleep
 import math
+import os
 
 sampleSize = 10
 heading = []
@@ -16,6 +22,7 @@ initAlt = 0
 alt = []
 i = 0
 dataOrder = ""
+outputFile = ""
 
 def main():
     try:
@@ -41,16 +48,23 @@ def calcPitch(x,y,z):
 
 def init():
     #load the order data is printed in
-    if len(sys.argv) != 2:
-        print("remember to feed the config file")
+    if len(sys.argv) != 3:
+        print("remember to feed the config file and output pipe")
         exit()
 
+    #load the config file
     configFile = open(sys.argv[1],'r')
     configJson = json.loads(configFile.read())
     global dataOrder
     dataOrder = configJson['network']['telDataOrder']
+    
+    #Open the fifo we'll write the data out to. This line will block until 
+    #a reader is attatched to the fifo. 
+    global outputFile
+    outputFile = open(sys.argv[2], 'w', 1)
+    print("Telemetry FIFO opened")
 
-    #Build a samples database
+    #Build a samples history to work with
     global heading
     global pressure
     global oat
@@ -69,6 +83,7 @@ def init():
     initAlt = toAlt(sum(pressure) / len(pressure))
     for i in range(0,sampleSize):
         alt.append(toAlt(pressure[i]) - initAlt)
+    
 
 def loop():
     #Boilerplate
@@ -95,15 +110,19 @@ def loop():
     pitch[i] = calcPitch(x,y,z)
     speed[i] = 0.0 #TODO
     
-    #print them out
-    print(dataOrder.format(
-        heading = str(round(sum(heading) / len(heading), 2)),
-        altitude =  str(roundup(sum(alt) / len(alt))),
-        aob = str(round(sum(aob) / len(aob) , 2)),
-        pitch = str(round(sum(pitch) / len(pitch), 2)),
-        speed = 0.0, #TODO
-        oat = str(round(sum(oat) / len(oat), 1))
-    ))
+    #write the samples out to the fifo
+    try:
+        outputFile.write(dataOrder.format(
+            heading = str(round(sum(heading) / len(heading), 2)),
+            altitude =  str(roundup(sum(alt) / len(alt))),
+            aob = str(round(sum(aob) / len(aob) , 2)),
+            pitch = str(round(sum(pitch) / len(pitch), 2)),
+            speed = 0.0, #TODO
+            oat = str(round(sum(oat) / len(oat), 1))
+        )+'\n')
+    except IOError as e:
+        #The reader on the pipe shut down, so we should too
+        exit()
 
     #Prepare for the next iteration
     i = i + 1
