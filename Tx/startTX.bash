@@ -13,7 +13,8 @@ then
 fi
 
 #Send the config file over bluetooth
-python initFPV.py config.json
+echo "*****Serving config over bluetooth"
+python initFPV.py config.json &!
 
 #read data from the config file
 echo "*****Reading config"
@@ -42,7 +43,7 @@ sudo python telemetryTx.py ./config.json /tmp/fifo1 &!
 
 #video
 echo "*****Starting video"
-sudo raspivid -ih -t 0 -w $width -h $height -fps $fps -b $bitrate -g $keyframerate -pf main -fl -o /tmp/fifo0 &!
+sudo raspivid -ih -t 0 -w $width -h $height -fps $fps -b $bitrate -n -g $keyframerate -pf high --flush -o /tmp/fifo0 &!
 
 #Transmission
 sudo tx -b $packetsPerBlock -r $fec -f $bytesPerPacket -s 2 wlan_fpv
