@@ -1,8 +1,6 @@
-iface=wlan_fpv
-
-#Make the pipe that we'll read from
-rm tel
-mkfifo tel
+#add some data to the pipe to prevent hang ups
+echo "init" > /tmp/vid
 
 #Begin reading from the antenna
-sudo ./rx -b $packetsPerBlock -r $fec -f $bytesPerPacket wlan_fpv > tel
+echo "	vid.bash: Starting listener with packetsPerBlock $packetsPerBlock, fec $fec bytesPerPacket, $bytesPerPacket"
+sudo rx -b $packetsPerBlock -r $fec -f $bytesPerPacket -p 0 wlan_fpv > /tmp/vid

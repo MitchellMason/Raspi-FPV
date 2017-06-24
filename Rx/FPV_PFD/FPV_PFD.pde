@@ -1,4 +1,5 @@
-import processing.video.*; //<>//
+import gohai.glvideo.*; //<>//
+
 import java.net.*;
 import java.io.IOException;
 
@@ -10,11 +11,9 @@ import java.util.Arrays;
 
 import javax.bluetooth.*;
 
-PGraphics video;
 PGraphics telLayer;
 PFont helvetica;
 Telemetry tel;
-Movie camera;
 
 final int WIDTH = 800;
 final int HEIGHT = 480;
@@ -38,11 +37,12 @@ JSONObject config;
 Process telPro, vidPro;
 BufferedReader telPipe, vidPipe;
 
+GLMovie drone_cam;
+
 void setup() {
-  size(800, 480); //resolution of display
+  size(800, 480, P2D); //resolution of display
   //TODO make fullscreen
 
-  video     = createGraphics(WIDTH, HEIGHT);
   telLayer  = createGraphics(WIDTH, HEIGHT);
   telLayer.smooth(8);
   helvetica = loadFont("Courier-96.vlw");
@@ -146,11 +146,18 @@ void setup() {
     telEnv.put("fec", ""+fec);
     telEnv.put("bytesPerPacket", ""+bytesPerPacket);
     this.telPro = telemetry.start();
-    telPipe = createReader("tel");
+    telPipe = createReader("/tmp/tel");
 
     //Start the process that reads video data
+    println("\tStarting video listener");
     ProcessBuilder video = new ProcessBuilder("bash", sketchPath() + "/data/vid.bash").inheritIO();
-    //this.vidPro = video.start();
+    Map<String, String> vidEnv = video.environment();
+    vidEnv.put("packetsPerBlock", ""+packetsPerBlock);
+    vidEnv.put("fec", ""+fec);
+    vidEnv.put("bytesPerPacket", ""+bytesPerPacket);
+    this.vidPro = video.start();
+    drone_cam = new GLMovie(this, "/tmp/vid");
+    drone_cam.enableDebug();
   }
   catch(IOException ioe) {
     println("IO Error on starting telemetry");
@@ -164,19 +171,27 @@ void setup() {
 }
 
 void draw() {
-  background(0);
-
+  
+  //update the tel data
   updateData();
-
-  video.beginDraw();
-  updateVideo();
-  video.endDraw();
+  
+  //update and read the drone_cam footage
+  if(drone_cam.available()){
+    background(0,255,0);
+    drone_cam.read();
+    drone_cam.play();
+  }
+  else{
+    background(255,0,0);
+  }
+  
+  image(drone_cam, 0,0,width, height);
+  
 
   telLayer.beginDraw();
   drawTelemetry();
   telLayer.endDraw();
 
-  image(video, 0, 0);
   image(telLayer, 0, 0);
 
   if (DEBUG) {
@@ -188,30 +203,28 @@ void draw() {
 
 void updateData() {
   try {
-    if (telPipe.ready()) {
+    if (telPipe != null && telPipe.ready()) { ///TODO, remove null check
       String line = telPipe.readLine();
       if (line != null) {
         String[] samples = line.split(",");
-        if(samples.length == 6){
+        if (samples.length == 6) {
           //TODO use teldataorder as sent over bluetooth
           tel.setHeading(parseInt(samples[0]));
-          
+
           //pressure -> alt taken from https://en.wikipedia.org/wiki/Pressure_altitude
           float millibars = parseFloat(samples[1]) / 100.0f;
           tel.setAltitude((int)((1-Math.pow(millibars / 1013.25, 0.190284)) * 145366.45));
           tel.setOAT(parseFloat(samples[2]));
-          tel.setAOB(-1 * parseFloat(samples[3]) * 100);
-          
-        }
-        else{
+          tel.setAOB(-1 * parseFloat(samples[5]) * 100);
+        } else {
           println("Potentially bad sample received: " + line);
         }
-      }
-      else{
+      } else {
         println("Error: null string read from telemetry");
       }
     }
-  } catch(IOException ioe){
+  } 
+  catch(IOException ioe) {
     println("tel Pipe threw exception.");
     ioe.printStackTrace();
     exit();
@@ -335,8 +348,4 @@ void drawTelemetry() {
       telLayer.text(headingName, xCoord, HEIGHT * .96f);
     }
   }
-}
-
-void updateVideo() {
-  video.background(0);
 }
