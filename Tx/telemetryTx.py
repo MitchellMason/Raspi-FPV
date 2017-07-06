@@ -17,6 +17,8 @@ from envirophat import *
 from time import sleep
 import math
 import os
+import time
+from datetime import datetime, timedelta
 
 #How many samples we hold at any time (To smoothen out results)
 sampleSize = 10
@@ -54,11 +56,6 @@ def main():
     except KeyboardInterrupt:
         print("closing")
         leds.off()
-
-# Convert from bars to Feet
-def toAlt(hp):
-    mb = hp / 100
-    return (1 - pow(mb / 1013.25, 0.190284)) * 145366.45
 
 def roundup(x):
     return int(math.ceil(x / 10.0)) * 10
@@ -120,7 +117,7 @@ def init():
     global initAlt
     for i in range(0,sampleSize):
         heading.append(motion.heading())
-        pressure.append(weather.pressure())
+        pressure.append(weather.altitude())
         oat.append(weather.temperature())
         x,y,z = motion.accelerometer()
         
@@ -140,9 +137,9 @@ def init():
         else:
             pitch.append(calcPitch(x,y,z))
         speed.append(-1)
-    initAlt = toAlt(sum(pressure) / len(pressure))
+    initAlt = 0 #(sum(pressure) / len(pressure))
     for i in range(0,sampleSize):
-        alt.append(toAlt(pressure[i]) - initAlt)
+        alt.append((pressure[i]) - initAlt)
     
 
 def loop():
@@ -165,8 +162,8 @@ def loop():
 
     #Take new samples
     heading[i] = motion.heading()
-    pressure[i] = weather.pressure()
-    alt[i] = initAlt - toAlt(pressure[i])
+    pressure[i] = weather.altitude()
+    alt[i] = pressure[i] #initAlt - (pressure[i])
     oat[i] = weather.temperature()
     x, y, z = motion.accelerometer()
     #factor in corrections
@@ -190,8 +187,9 @@ def loop():
     #write the samples out to the fifo
     try:
         outputFile.write(dataOrder.format(
+            time = str(datetime.utcnow()),
             heading = str(round(sum(heading) / len(heading), 2)),
-            altitude =  str(roundup(sum(alt) / len(alt))),
+            altitude =  str((sum(alt) / len(alt))),
             aob = str(round(sum(aob) / len(aob) , 2)),
             pitch = str(round(sum(pitch) / len(pitch), 2)),
             speed = 0.0, #TODO

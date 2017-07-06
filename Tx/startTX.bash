@@ -14,6 +14,7 @@ fi
 
 #Send the config file over bluetooth
 echo "*****Serving config over bluetooth"
+sudo killall python
 python initFPV.py config.json &!
 
 #read data from the config file

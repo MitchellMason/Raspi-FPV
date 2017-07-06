@@ -2,19 +2,19 @@
     "TxCorrections":{
         "xyzMapping": "yxz",
         "invertPitch": true,
-        "invertAOB": false
+        "invertAOB": true
     },
     "network": {
-        "bytesPerPacket": 64,
-        "fec": 1,
-        "packetsPerBlock": 4,
-        "telDataOrder": "{heading},{altitude},{aob},{pitch},{speed},{oat}"
+        "bytesPerPacket": 1450,
+        "fec": 4,
+        "packetsPerBlock": 8,
+        "telDataOrder": "{time},{heading},{altitude},{aob},{pitch},{speed},{oat}"
     },
     "video": {
         "bitrate": 2500000,
-        "fps": 30,
+        "fps": 5,
         "height": 480,
-        "keyframerate": 15,
+        "keyframerate": 180,
         "width": 800
     }
 }

@@ -21,11 +21,13 @@ sock.bind((hostMACAddress, port))
 sock.listen(backlog)
 
 try:
-    print("\tWaiting for connection on " + str(sock.getsockname()))
-    client, clientInfo = sock.accept()
-    print("\tConnected to " + str(client) + ". Sending file")
-    client.send(str(raw_json))
-    print("\tSent. Closing")
+    run = True
+    while run:
+        print("\tWaiting for connection on " + str(sock.getsockname()))
+        client, clientInfo = sock.accept()
+        print("\tConnected to " + str(client) + ". Sending file")
+        client.send(str(raw_json))
+    print("\tClosing BT")
     client.close()
     sock.close()
 except:
