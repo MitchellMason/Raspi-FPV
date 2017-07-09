@@ -8,4 +8,4 @@ sudo ifconfig wlan_fpv up
 sudo iwconfig wlan_fpv channel 13
 
 #Start the video
-sudo rx -b 8 -r 4 -f 1450 -p 0 wlan_fpv | /opt/vc/src/hello_pi/hello_video/hello_video.bin
+sudo rx -b 8 -r 4 -f 1024 -p 0 wlan_fpv | /opt/vc/src/hello_pi/hello_video/hello_video.bin

@@ -2,5 +2,5 @@
 echo "init" > /tmp/tel
 
 #Begin reading from the antenna
-echo "	tel.bash: Starting listener with packetsPerBlock $packetsPerBlock, fec $fec bytesPerPacket, $bytesPerPacket"
-sudo rx -p 1 -b $packetsPerBlock -r $fec -f $bytesPerPacket wlan_fpv > /tmp/tel
+echo "	tel.bash: Starting listener"
+sudo rx -b $packetsPerBlock -r $fecPacketsPerBlock -f $fecBlockSize -p 1 wlan_fpv > /tmp/tel
