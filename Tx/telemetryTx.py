@@ -21,7 +21,8 @@ import time
 from datetime import datetime, timedelta
 
 #How many samples we hold at any time (To smoothen out results)
-sampleSize = 10
+sampleSize = 5
+samplesPerSecond = 0 #To be read from config
 heading = []
 pressure = []
 oat = []
@@ -75,6 +76,8 @@ def init():
     # load the config file
     configFile = open(sys.argv[1],'r')
     configJson = json.loads(configFile.read())
+    global samplesPerSecond
+    samplesPerSecond = configJson['video']['fps']
     global dataOrder
     dataOrder = configJson['network']['telDataOrder']
     global xyzMapping
@@ -187,14 +190,16 @@ def loop():
     #write the samples out to the fifo
     try:
         outputFile.write(dataOrder.format(
-            time = str(datetime.utcnow()),
-            heading = str(round(sum(heading) / len(heading), 2)),
-            altitude =  str((sum(alt) / len(alt))),
-            aob = str(round(sum(aob) / len(aob) , 2)),
-            pitch = str(round(sum(pitch) / len(pitch), 2)),
+            time = str(datetime.today().hour) + ":" + str(datetime.today().minute) + ":" + str(datetime.today().second) + "." + str(datetime.today().microsecond),
+            heading = str(round(sum(heading) / sampleSize, 2)),
+            altitude =  str((sum(alt) / sampleSize)),
+            aob = str(round(sum(aob) / sampleSize , 2)),
+            pitch = str(round(sum(pitch) / sampleSize, 2)),
             speed = 0.0, #TODO
-            oat = str(round(sum(oat) / len(oat), 1))
+            oat = str(round(sum(oat) / sampleSize, 1))
         )+'\n')
+        global samplesPerSecond
+        sleep(2 / samplesPerSecond)
     except IOError as e:
         #The reader on the pipe shut down, so we should too
         exit()

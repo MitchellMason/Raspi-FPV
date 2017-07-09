@@ -5,16 +5,18 @@
         "invertAOB": true
     },
     "network": {
-        "bytesPerPacket": 1450,
-        "fec": 4,
-        "packetsPerBlock": 8,
+        "FECPacketsPerBlock": 2,
+        "FECBlockSize": 1024,
+        "PacketsPerBlock": 8,
+        "TransmissionsPerBlock": 1,
+        "MinBytesPerFrame": 0,
         "telDataOrder": "{time},{heading},{altitude},{aob},{pitch},{speed},{oat}"
     },
     "video": {
-        "bitrate": 2500000,
-        "fps": 5,
+        "bitrate": 0,
+        "fps": 24,
+        "width": 640,
         "height": 480,
-        "keyframerate": 180,
-        "width": 800
+        "keyframerate": 48
     }
 }
