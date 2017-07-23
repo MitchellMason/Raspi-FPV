@@ -6,17 +6,18 @@
     },
     "network": {
         "FECPacketsPerBlock": 2,
-        "FECBlockSize": 1024,
-        "PacketsPerBlock": 8,
-        "TransmissionsPerBlock": 1,
-        "MinBytesPerFrame": 0,
+        "FECBlockSize": 128,
+        "PacketsPerBlock": 32,
+        "TransmissionsPerBlock": 2,
+        "MinBytesPerFrame": 64,
         "telDataOrder": "{time},{heading},{altitude},{aob},{pitch},{speed},{oat}"
     },
     "video": {
-        "bitrate": 0,
-        "fps": 24,
-        "width": 640,
+        "bitrate": 200000,
+        "encprofile": "high",
+        "fps": 30,
+        "width": 800,
         "height": 480,
-        "keyframerate": 48
+        "keyframerate": 72
     }
 }

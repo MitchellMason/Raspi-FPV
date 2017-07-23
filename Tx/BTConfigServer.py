@@ -27,6 +27,7 @@ try:
         client, clientInfo = sock.accept()
         print("\tConnected to " + str(client) + ". Sending file")
         client.send(str(raw_json))
+        run = False
     print("\tClosing BT")
     client.close()
     sock.close()

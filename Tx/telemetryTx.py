@@ -7,7 +7,6 @@
 ##
 
 ##
-# TODO: Send current time (to calculate lag)
 # TODO: Send battery voltage remaining (Calculated through analong inputs)
 ##
 
@@ -21,7 +20,7 @@ import time
 from datetime import datetime, timedelta
 
 #How many samples we hold at any time (To smoothen out results)
-sampleSize = 5
+sampleSize = 3
 samplesPerSecond = 0 #To be read from config
 heading = []
 pressure = []
@@ -199,7 +198,7 @@ def loop():
             oat = str(round(sum(oat) / sampleSize, 1))
         )+'\n')
         global samplesPerSecond
-        sleep(2 / samplesPerSecond)
+        #sleep(1.0 / samplesPerSecond) #wait one frame of video before sending another sample
     except IOError as e:
         #The reader on the pipe shut down, so we should too
         exit()
