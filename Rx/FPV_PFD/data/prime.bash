@@ -1,3 +1,6 @@
+#kills previous instances of rx
+sudo killall rx
+
 #primes the antenna to receive/transmit data over monitor, and 
 #establishes fifo pipes
 

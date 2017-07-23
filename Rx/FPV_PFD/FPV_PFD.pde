@@ -30,91 +30,87 @@ JSONObject config;
 Process telPro, vidPro;
 BufferedReader telPipe, vidPipe;
 
-float telspf = 0.0f;
-float vidspf = 0.0f;
-float telsps = 0.0f; //sps=samples per second
-float vidsps = 0.0f; 
-int lastSec = 0;
-
-GLMovie drone_cam;
+GLVideo drone_cam;
 
 final boolean enableVideo = true; //For testing purposes. 
 
 void setup() {
   size(800, 480, P2D); //resolution of display
-  println("Started with renderer: " + g.getClass().getName());
   //TODO make fullscreen
 
   telLayer  = createGraphics(WIDTH, HEIGHT);
   telLayer.smooth(8);
   helvetica = loadFont("Courier-96.vlw");
 
-  lastSec = second();
-
   //Setup the bluetooth client and get the config data from drone
-  thread("initBT");
+  initBT();
+
+  //Create the GLVideo object without a pipeline. We'll do this later
+  drone_cam = new GLVideo(this, "udpsrc port=9305 ! h264parse ! decodebin", GLVideo.NO_SYNC & GLVideo.MUTE);
+  drone_cam.play();
 
   println("Setup complete");
 }
 
 void draw() {
+  boolean vidStarted = false;
   if (TxReady) {
-    //update the sample/sec count
-    if (lastSec < second()) {
-      lastSec = second();
-      vidsps = vidspf;
-      vidspf = 0.0f;
-      telsps = telspf;
-      telspf = 0.0f;
+    //update and read the drone_cam footage
+    if (enableVideo) {
+      if (drone_cam != null && drone_cam.available()) {
+        vidStarted = true;
+        drone_cam.read();
+        image(drone_cam, 0, 0, width, height);
+      } 
+      //if there's nothing availible, draw a loading screen. 
+      //There should be something, ideally
+      else {
+        image(drone_cam, 0, 0, width, height);
+        if (vidStarted) {
+          textSize(height * 0.03f);
+          fill(255);
+          textAlign(CENTER, CENTER);
+          text("Waiting for video", width/2, height/5);
+          fill(128);
+          arc(width/2, height/2, width/4, width/4, 
+            0, 
+            2*PI, 
+            CHORD);
+          fill(255);
+          float angle = map(frameCount % 60, 0, 59, 0, 2 * PI);
+          arc(width/2, height/2, width/4, width/4, 
+            angle, 
+            angle + PI, 
+            PIE);
+        }
+      }
     }
-    //update the tel data
+    //If we don't enable video, we're really just looking to see that telemetry is 
+    //Rendering correctly.
+    else {
+      background(0);
+    }
+
+    //Read telemetry data from the fifo
     try {
       String samples = "";
-      telspf = 0.0f;
+      //If there are more than one lines of telemetry, we only want the most recent
       while (telPipe.ready()) {
         samples = telPipe.readLine();
-        telspf+=1.0f;
       }
       if (!samples.isEmpty()) {
         tel.updateAll(samples);
       }
     } 
     catch(IOException ioe) {
-      println("TelPipe threw an ioe");
+      println("Error with reading from telemetry pipe.");
       ioe.printStackTrace();
       exit();
-    }
-
-    //update and read the drone_cam footage
-    if (enableVideo) {
-      if (drone_cam != null && drone_cam.available()) {
-        vidspf += 1.0f;
-        drone_cam.read();
-        image(drone_cam, 0, 0, width, height);
-      } else {
-        //if there's nothing availible, draw a loading screen. 
-        //There should be something, ideally
-        background(0, 0, 0);
-        fill(128);
-        arc(width/2, height/2, width/4, width/4, 
-          0, 
-          2*PI, 
-          PIE);
-        fill(255);
-        float angle = map(frameCount % 60, 0, 59, 0, 2 * PI);
-        arc(width/2, height/2, width/4, width/4, 
-          angle, 
-          angle + PI, 
-          PIE);
-      }
-    } else {
-      background(0);
     }
 
     //draw the telemetry layer
     drawTelemetry();
     image(telLayer, 0, 0);
-
     drawPipper(700, 150, 150, tel.getPitch(), tel.getAOB());
   } else {
     //wait for BT connection
@@ -123,6 +119,22 @@ void draw() {
     textSize(0.035f * HEIGHT);
     text(status, width / 2, height / 2);
   }
+}
+
+//Called on applet shutdown
+void stop() {
+  println("Shutting down");
+  if (drone_cam != null) drone_cam.close();
+  try {
+    if (telPipe != null) telPipe.close();
+    if (vidPipe != null) vidPipe.close();
+    if (con != null) con.close();
+  }
+  catch(IOException ioe) {
+    //doesn't really matter on shutdown
+  }
+  if (telPro != null) telPro.destroy();
+  if (vidPro != null) vidPro.destroy();
 }
 
 void initBT() {
@@ -145,9 +157,7 @@ void initBT() {
     }
     println("\tComms open. Reading.");
     status = "Got connection. Reading from it";
-    OutputStream os = con.openOutputStream();
     InputStream is = con.openInputStream();
-    RemoteDevice pi0 = RemoteDevice.getRemoteDevice(con);
 
     byte buffer[] = new byte[1024 * 1024];
     int bytes_read = is.read(buffer);
@@ -207,7 +217,7 @@ void initBT() {
   println("\tConfig loaded");
 
   println("Starting listening subprocesses");
-  status = "Priming Antenna";
+  status = "Configuring interface";
   try {
     println("\t Priming Antenna for FPV");
     ProcessBuilder primeAntenna = new ProcessBuilder("bash", sketchPath() + "/data/prime.bash").inheritIO();
@@ -254,20 +264,6 @@ void initBT() {
       vidEnv.put("fecPacketsPerBlock", ""+FECPacketsPerBlock);
       vidEnv.put("fecBlockSize", ""+FECBlockSize);
       this.vidPro = video.start();
-
-      println("Attempting to set up drone_cam");
-      delay(1000);
-      status = "Starting GL";
-      try {
-        drone_cam = new GLMovie(this, "/tmp/vid");
-        drone_cam.enableDebug();
-        drone_cam.play();
-      } 
-      catch (RuntimeException re) {
-        println("Couldn't start GL Video.");
-        re.printStackTrace();
-      }
-      println("done");
     }
   }
   catch(IOException ioe) {
